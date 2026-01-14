@@ -1,0 +1,14 @@
+{
+  "index": "Introduction",
+  "whitepaper": "Whitepaper",
+  "roadmap": "Roadmap",
+  "networks": "Network Support",
+  "sdk": "Coset SDK",
+  "contracts": "Smart Contracts",
+  "contact": {
+    "title": "App ↗",
+    "type": "page",
+    "href": "https://coset.dev",
+    "newWindow": true
+  }
+}
