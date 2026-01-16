@@ -1,0 +1,36 @@
+# CST Token
+
+CST is Coset's ERC20 token. It is designed to work well with **x402** by supporting **EIP-3009** (gas-abstracted transfers).
+
+You can find the deployed address on the [Contracts List](/contracts/list).
+
+## Basics
+
+- Name: `Coset`
+- Symbol: `CST`
+- Decimals: `6`
+- Initial supply: `1,000,000 CST` minted to the initial owner at deployment
+
+## Why EIP-3009 matters
+
+Coset uses **EIP-3009** so a transfer can be authorized via an off-chain signature and executed on-chain by someone else (e.g. a relayer / Coset node).
+
+The token supports:
+
+- `transferWithAuthorization(...)`
+- `receiveWithAuthorization(...)` (payee must be the caller)
+- `cancelAuthorization(...)`
+- `authorizationState(authorizer, nonce)`
+
+Notes:
+
+- Each authorization uses a `nonce` and a `[validAfter, validBefore]` time window.
+- A nonce can be used only once (used or canceled).
+
+## EIP-712 / permit helpers
+
+The CST token also exposes standard EIP-712 metadata through the underlying permit implementation.
+
+- `permit(...)` (EIP-2612)
+- `version()` (returns the EIP-712 version string)
+

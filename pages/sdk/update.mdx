@@ -1,0 +1,91 @@
+
+# Data Update
+
+Coset updates are **paid** operations. The SDK handles payment settlement via x402 and then submits the update request to a Coset node.
+
+You need:
+
+- a `Coset` instance configured for the right network + oracle
+- a wallet private key (for signing)
+- sufficient `USDC` or `CST` balance on the selected network
+
+## `coset.update()`
+
+Use [`Coset.update()`](docs/pages/sdk/reference.mdx:143) to perform a paid update.
+
+```typescript
+import { Coset, Networks, PaymentToken } from "@coset-dev/sdk";
+
+const coset = new Coset(
+  Networks.MANTLE_TESTNET,
+  PaymentToken.USDC,
+  "0xabc...", // Oracle Address
+  process.env.PRIVATE_KEY as `0x${string}`
+);
+
+const update = await coset.update();
+
+console.log("Spent:", update.spent.total);
+console.log("Tx:", update.tx);
+console.log("Data:", update.data);
+```
+
+### Returned shape (`IUpdate`)
+
+On success, `update()` resolves to an [`IUpdate`](docs/pages/sdk/reference.mdx:64):
+
+- `spent`: cost breakdown (total, gasFee, platformFee, dataProviderFee)
+- `data` (optional): update response payload
+- `tx` (optional): transaction hash
+
+On success, the SDK also increments [`coset.spent`](docs/pages/sdk/reference.mdx:131) by `spent.total`.
+
+## Spending limits
+
+`Coset` tracks how much you have spent through the instance and can enforce a limit.
+
+```typescript
+await coset.setSpendingLimit(5); // e.g. allow spending up to 5 units total
+
+// Later...
+await coset.update();
+```
+
+If `coset.spent >= coset.spendingLimit`, `update()` rejects with:
+
+```ts
+{
+  message: "Spending limit exceeded",
+  spent: { total: 0, gasFee: 0, platformFee: 0, dataProviderFee: 0 },
+}
+```
+
+To bypass the guard, pass `force: true`:
+
+```typescript
+await coset.update({ force: true });
+```
+
+## Updating only when needed
+
+To check whether an update is recommended (based on node metadata):
+
+```typescript
+const needed = await coset.isUpdateNeeded();
+
+if (needed) {
+  await coset.update();
+}
+```
+
+Or use [`Coset.optionalUpdate()`](docs/pages/sdk/reference.mdx:211), which performs that check and triggers an update when needed, but always resolves with `null`:
+
+```typescript
+await coset.optionalUpdate();
+```
+
+## Rejection behavior
+
+Unlike `read()`, [`Coset.update()`](docs/pages/sdk/reference.mdx:143) **rejects** on failures.
+
+The rejection value is an object (not an `Error`) and typically contains a `message` and a zeroed `spent` object. See the detailed cases in the reference.

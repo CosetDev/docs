@@ -1,0 +1,28 @@
+# How it works?
+
+There are 2 perspectives to consider when understanding how Coset works:
+
+- Data provider
+- Data requester
+
+## Data Provider
+
+Before we start, we need to assume that data provider has an actively running public API endpoint that serves data in a JSON format.
+
+If you are a data provider, your sole purpose is to serve data and secure your endpoint using Coset access tokens. Everything else is handled by the Coset relayer node.
+
+Data providers earn money based on requests. For every update call, they earn USDC or CST tokens, based on their choice. Each provider has its own oracle contract, which is deployed by an oracle factory contract. Providers can easily create their oracles using the Coset web app and skip the complex deployment process.
+
+Data providers are responsible to keep their private API endpoints using Coset's access tokens. Coset relayer node sends a request to private API endpoints every time an update is requested. During this server-to-server HTTP request, Coset node sends an authorization header so that private endpoint can check if the request is valid. You can create your access tokens on the platform.
+
+## Data Requester
+
+As a data requester, you can access oracle data without fees. You can read every data freely. But here's a catch: You are likely to update oracle data periodically.
+
+Imagine a price feed oracle. You can read the latest CST token price without fees. However, CST price changes over time and if no one calls an update, the oracle will be useless. That's why one of the requesters needs to call an update to have fresh data.
+
+The update cycle looks like this:
+
+![Cycle](/cycle.png)
+
+Briefly, when a data requester calls an update function, the SDK sends a request to the relayer node. Relayer node demands a payment to cover gas fees, provider earnings, and platform fees. After requester settles the payment using brand new x402 technology, data is written on the blockchain and every oracle listener receives the new data as well as the requester itself.

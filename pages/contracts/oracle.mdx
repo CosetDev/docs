@@ -1,0 +1,61 @@
+# Oracle
+
+Each Coset oracle stores a provider's latest payload on-chain (as raw `bytes`) and exposes simple read endpoints.
+
+Oracles are deployed by the [Oracle Factory](/contracts/oracle-factory). The provider is an EOA address and is stored immutably on the oracle.
+
+## Data format & limits
+
+- Data is stored as `bytes`
+- Empty data is not allowed
+- Max size is **5 KB** (`5120` bytes)
+
+## Reading data
+
+The oracle provides two read methods:
+
+## `getData()`
+
+Strict read. Reverts if the data is considered stale:
+
+- It checks `block.timestamp - lastUpdateTimestamp > recommendedUpdateDuration`
+
+## `getDataWithoutCheck()`
+
+Non-strict read. Returns the latest stored data without the staleness check.
+
+Both read methods require the oracle to be **active**.
+
+## Updating data
+
+Oracles are updated through the factory (not directly by requesters).
+
+## `updateData(bytes)`
+
+- Only callable by the **Oracle Factory**
+- Updates `lastUpdateTimestamp`
+- Stores the payload
+- Emits `DataUpdated(data, timestamp)`
+
+## Access control
+
+- Provider can call:
+  - `setRecommendedUpdateDuration(uint256)`
+- Factory can call:
+  - `updateData(bytes)`
+  - `setDataUpdatePrice(uint256)`
+  - `setOracleStatus(bool)`
+
+## Activity flag
+
+If `isActive == false`:
+
+- reads revert
+- updates revert
+
+The factory can toggle this flag (see `OracleFactory.setOracleStatus(...)`).
+
+## History
+
+The oracle keeps the last **100** data snapshots in a ring buffer (`history`), along with timestamps.
+

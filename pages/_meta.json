@@ -1,10 +1,18 @@
 {
   "index": "Introduction",
+  "how-it-works": "How It Works",
   "whitepaper": "Whitepaper",
   "roadmap": "Roadmap",
+  "---": {
+    "type": "separator"
+  },
   "networks": "Network Support",
-  "sdk": "Coset SDK",
   "contracts": "Smart Contracts",
+  "----": {
+    "type": "separator"
+  },
+  "sdk": "Coset SDK",
+  "providers": "Data Providers",
   "contact": {
     "title": "App ↗",
     "type": "page",

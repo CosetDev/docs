@@ -1,1 +1,9 @@
 # Coset
+
+Coset is a public oracle service designed to make off-chain data open, permissionless, and easy to monetize. Instead of relying on a small number of trusted providers, Coset allows anyone to create an oracle and provide data to applications.
+
+In Coset, data providers use their private endpoints to communicate with Coset relayer node and provide data. Users can read data from the oracle contract, or use the Coset SDK. When a data update is required, the request responds with HTTP 402 (Payment Required). The requester completes the payment, and data is delivered.
+
+Payments are made using USDC or the CST token. Data providers get paid instantly when a fresh data is requested.
+
+Coset treats data as a public resource with an open market. Developers get reliable data when they need it, and providers are rewarded instantly for keeping their data up to date.

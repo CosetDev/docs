@@ -1,0 +1,34 @@
+# Getting Started
+
+After we installed the dependencies, we can start using Coset SDK.
+
+Start by importing the SDK in your project:
+
+```typescript
+import { Coset, Networks, PaymentToken } from "@coset-dev/sdk";
+```
+
+`Coset` is the main class that we will use to interact with the Coset protocol.
+
+`Networks` and `PaymentToken` are enums that help us specify the network and payment token we want to use.
+
+In Coset SDK, every instance is tied to a specific oracle. So, we need to provide the oracle address when creating a Coset instance.
+
+For this example, we will use a CST-USDT price feed oracle deployed on Mantle Sepolia Testnet. You can use whatever oracle address you want. You can search for oracles at [Coset App](https://coset.dev).
+
+Now we can create a Coset instance:
+
+```typescript
+const coset = new Coset(
+    Networks.MANTLE_TESTNET,
+    PaymentToken.USDC,
+    "0xabc...", // Oracle Address
+    process.env.PRIVATE_KEY as `0x${string}` // Wallet Private Key
+);
+```
+
+Here, we created a new Coset instance for the CST-USDT price feed oracle on Mantle Sepolia Testnet, using USDC as the payment token. We also provided a private key for signing transactions.
+
+Wallet private key is required for data updates. Be sure you have enough USDC or CST token on chosen network.
+
+And now we can start reading data from oracles and call data updates.

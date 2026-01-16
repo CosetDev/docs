@@ -1,0 +1,319 @@
+# API Reference
+
+Coset SDK API reference.
+
+## Exports
+
+- **`Coset`** (class)
+- **`Networks`** (enum)
+- **`PaymentToken`** (enum)
+- **`UpdateOptions`** (type)
+- **`IRead`** (interface)
+- **`IUpdate`** (interface)
+
+## Types
+
+### `Networks` (enum)
+
+```ts
+export enum Networks {
+  MANTLE = "mantle",
+  MANTLE_TESTNET = "mantle-testnet",
+}
+```
+
+### `PaymentToken` (enum)
+
+```ts
+export enum PaymentToken {
+  USDC = "USDC",
+  CST = "CST",
+}
+```
+
+### `UpdateOptions` (type)
+
+```ts
+export type UpdateOptions = {
+  force?: boolean;
+};
+```
+
+- **`force`**: when `true`, bypasses the `spent >= spendingLimit` guard in `Coset.update()` / `Coset.strictRead()` (update path only).
+
+### `IRead` (interface)
+
+```ts
+export interface IRead {
+  data: Record<string, any>;
+  message?: string;
+  lastUpdateTimestamp?: number;
+  lastUpdateFormatted?: string;
+  isUpdateRecommended?: boolean;
+  recommendedUpdateDuration?: number;
+}
+```
+
+- **`data`**: oracle response payload returned from the Coset node.
+- **`message`** *(optional)*: error message (see notes under `Coset.read()` / `Coset.strictRead()`).
+- **`lastUpdateTimestamp`** *(optional)*: UNIX timestamp (seconds) of last on-chain update.
+- **`lastUpdateFormatted`** *(optional)*: ISO timestamp derived from `lastUpdateTimestamp`.
+- **`isUpdateRecommended`** *(optional)*: whether \(now - lastUpdateTimestamp >= recommendedUpdateDuration\).
+- **`recommendedUpdateDuration`** *(optional)*: recommended update interval (seconds).
+
+### `IUpdate` (interface)
+
+```ts
+export interface IUpdate {
+  spent: {
+    total: number;
+    gasFee: number;
+    platformFee: number;
+    dataProviderFee: number;
+  };
+  data?: any;
+  tx?: string;
+  message?: string;
+}
+```
+
+- **`spent`**: cost breakdown (numbers are derived from x402 settlement `priceDetails`; see `Coset.update()`).
+- **`data`** *(optional)*: update response payload (`data.data` from node response).
+- **`tx`** *(optional)*: transaction hash (`data.transactionHash` from node response).
+- **`message`** *(optional)*: error message (only present on rejected results, not returned values).
+
+## Class: `Coset`
+
+### Construction
+
+```ts
+new Coset(
+  networkName: Networks,
+  paymentToken: PaymentToken,
+  oracleAddress: `0x${string}`,
+  privateKey: `0x${string}`,
+  nodeEndpoint?: string
+)
+```
+
+- **`networkName`**: selects token address mapping (see “Payment token resolution” below).
+- **`paymentToken`**: selects the token symbol which is mapped to an on-chain token address.
+- **`oracleAddress`**: used to build the free-call base path; must match `/^0x[0-9a-fA-F]+$/`.
+- **`privateKey`**: used to derive an EVM account signer (internally via `viem`); if missing `0x` or not length `66`, the implementation prepends `0x` (no further validation).
+- **`nodeEndpoint`** *(optional)*: overrides the default node base URL. Must be a valid URL string accepted by `new URL(nodeEndpoint)`. If it does not end with `/`, a trailing slash is added.
+
+**Throws**
+
+- **`Error("Invalid oracle address")`** if `oracleAddress` fails the regex check.
+- **`Error("Invalid node endpoint")`** if `nodeEndpoint` is provided but cannot be parsed by `new URL(nodeEndpoint)`.
+
+**Runtime behavior**
+
+- **Node base URL (`node`)**:
+  - default: **`https://node1.coset.dev/`**
+  - overridden by `nodeEndpoint` (normalized to end with `/`)
+- **Free-call base URL (`call`)**: always built as:
+  - `call = "<node>call/<oracleAddress>/"` (used by `read()`, `isUpdateNeeded()`, `getUpdateCost()`, and internal balance/metadata calls)
+- **Paid update endpoint**:
+  - `POST "<node>update"` (used by `update()`)
+
+**Payment token resolution (internal map)**
+
+- `Networks.MANTLE`:
+  - `PaymentToken.USDC` → `0x09bc4e0d864854c6afb6eb9a9cdf58ac190d0df9`
+  - `PaymentToken.CST` → `0x77A90090C9bcc45940E18657fB82Fb70A2D494fd`
+- `Networks.MANTLE_TESTNET`:
+  - `PaymentToken.USDC` → `0x05856b07544044873616d390Cc50c785fe8a8885`
+  - `PaymentToken.CST` → `0x77A90090C9bcc45940E18657fB82Fb70A2D494fd`
+
+### Public properties
+
+#### `spent: number`
+
+- **Default**: `0`
+- **Mutations**: incremented by `Coset.update()` on success (`this.spent += spent.total`).
+
+#### `spendingLimit: number`
+
+- **Default**: `Infinity`
+- **Used by**: `Coset.update()` (guarded unless `UpdateOptions.force === true`).
+
+### Public methods
+
+#### `update(options?: UpdateOptions): Promise<IUpdate>`
+
+```ts
+async update(options: UpdateOptions = { force: false }): Promise<IUpdate>
+```
+
+Performs a **paid** update by POSTing to `POST <node>update` using x402 payment via `wrapFetchWithPayment`.
+
+**Parameters**
+
+- **`options.force`** *(default: `false`)*: bypasses spending limit check.
+
+**Resolves** with:
+
+- An `IUpdate` containing:
+  - `spent`: populated from x402 settlement `requirements.extra.priceDetails` (numbers are coerced with `Number(...)`).
+  - `data`: `data.data` from the node JSON response.
+  - `tx`: `data.transactionHash` from the node JSON response.
+
+**Side effects**
+
+- On success: **increments** `this.spent` by `spent.total`.
+- Registers an x402 `onBeforePaymentCreation` hook each time `update()` is called (to check token balance).
+
+**Rejects** with an object (not an `Error`) in these cases:
+
+- **Spending limit exceeded** (before any network call), when `this.spent >= this.spendingLimit` and `options.force !== true`:
+
+```ts
+{
+  message: "Spending limit exceeded",
+  spent: { total: 0, gasFee: 0, platformFee: 0, dataProviderFee: 0 },
+}
+```
+
+- **Update request failed** (`response.ok === false` after POST):
+
+```ts
+{
+  message: `Update failed with status ${status}`,
+  spent: { total: 0, gasFee: 0, platformFee: 0, dataProviderFee: 0 },
+  data: any, // node JSON response
+}
+```
+
+- **Payment settlement failed** (`paymentResponse.success === false`):
+
+```ts
+{
+  message: paymentResponse.errorReason,
+  spent: { total: 0, gasFee: 0, platformFee: 0, dataProviderFee: 0 },
+  data: any, // node JSON response
+}
+```
+
+- **Other failures** (exceptions thrown during processing):
+
+```ts
+{
+  message: string, // error.message || "Update failed"
+  spent: { total: 0, gasFee: 0, platformFee: 0, dataProviderFee: 0 },
+}
+```
+
+Notes:
+
+- The “insufficient token balance” check aborts payment creation inside x402; the message surfaced to callers depends on the x402 library behavior (the SDK sets `reason: "Insufficient token balance for payment"` in the hook).
+
+#### `optionalUpdate(): Promise<null | IUpdate>`
+
+```ts
+async optionalUpdate(): Promise<null | IUpdate>
+```
+
+Calls `isUpdateNeeded()`, and if it returns `true`, calls `update()` **but does not return its result**.
+
+**Resolves** with:
+
+- **Always `null`** (even if an update was performed).
+
+**Rejects**
+
+- If `isUpdateNeeded()` rejects, `optionalUpdate()` rejects.
+- If `update()` rejects (when an update is needed), `optionalUpdate()` rejects with the same rejection value as `update()`.
+
+#### `isUpdateNeeded(): Promise<boolean>`
+
+```ts
+async isUpdateNeeded(): Promise<boolean>
+```
+
+Fetches update metadata from the node and computes:
+
+- `Math.floor(Date.now() / 1000) - lastUpdateTimestamp >= recommendedUpdateDuration`
+
+**Resolves** with:
+
+- `true` if update is needed, else `false`.
+
+**Rejects**
+
+- If the metadata fetch fails (node/network/JSON errors), rejects with the underlying rejection object from the internal node call.
+
+#### `read(strict?: boolean): Promise<IRead>`
+
+```ts
+async read(strict = false): Promise<IRead>
+```
+
+Fetches oracle data and update metadata concurrently.
+
+**Parameters**
+
+- **`strict`** *(default: `false`)*:
+  - `false` → calls node path `get-data-without-check`
+  - `true` → calls node path `get-data`
+
+**Resolves** with an `IRead` shaped object containing:
+
+- `data`: result of the node “get data” call (whatever JSON it returns)
+- `lastUpdateTimestamp`, `recommendedUpdateDuration`: from `get-update-metadata`
+- `isUpdateRecommended`: computed from metadata
+- `lastUpdateFormatted`: ISO string from `lastUpdateTimestamp`
+
+**Error behavior (important)**
+
+- This method **does not reject on failure**; it **returns** the caught error value as-is:
+  - on failure, the resolved value may be an object like `{ message: string, data?: any }` coming from internal node calls.
+
+#### `strictRead(options?: UpdateOptions): Promise<IRead>`
+
+```ts
+async strictRead(options: UpdateOptions = { force: false }): Promise<IRead>
+```
+
+Implementation behavior:
+
+- First attempts `return await this.read(true)`.
+- Only if `read(true)` throws (rejects), it performs `update(options)` and returns `{ data }` from the update result.
+
+**Resolves** with:
+
+- Usually: the same value returned by `read(true)` (see `read()`).
+- Fallback path: `{ data: any }` where `data` is from `update()`’s resolved value.
+
+**Notes**
+
+- Because `read(true)` typically **returns errors instead of throwing**, the update fallback may be **unreachable** for many failure modes (depends on whether `read(true)` throws vs returns an error object).
+
+#### `getUpdateCost(): Promise<{ units: string; amount: number }>`
+
+```ts
+async getUpdateCost(): Promise<{ units: string; amount: number }>
+```
+
+Fetches update price from the node path `get-data-update-price`.
+
+**Resolves** with:
+
+- `{ units: string; amount: number }` (shape returned by the node; not validated beyond `await res.json()`).
+
+**Rejects**
+
+- If the underlying node call fails (HTTP error / JSON parse error / network), rejects with the internal rejection object:
+  - `{ message: string, data?: any }`
+
+#### `setSpendingLimit(spendingLimit: number): Promise<void>`
+
+```ts
+async setSpendingLimit(_spendingLimit: number): Promise<void>
+```
+
+Sets `this.spendingLimit` to `_spendingLimit`.
+
+**Resolves** with:
+
+- `void` (immediately).

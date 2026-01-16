@@ -1,0 +1,91 @@
+# Oracle Factory
+
+Oracle Factory is the contract that deploys and manages all Coset oracles.
+
+In practice, Coset’s relayer node owns the factory and uses it to:
+
+- deploy new provider oracles (paid)
+- update oracle data (paid, with provider rewards)
+- activate/deactivate oracles
+
+You can find the deployed address on the [Contracts List](/contracts/list).
+
+## Factory config
+
+The factory stores a `config` struct:
+
+- `oracleDeployPrice`: price to deploy an oracle (default is **5 USDC**)
+- `oracleFactoryShare`: platform share percentage (default is **20%**)
+- `usdcTokenAddress`: USDC token address on the current network
+- `cstTokenAddress`: CST token address on the current network
+
+Owner can update these via `updateConfig(...)`.
+
+## Payments (USDC / CST)
+
+The factory accepts **USDC** and **CST** as payment tokens.
+
+Important:
+
+- Both tokens are expected to support **EIP-3009** (`transferWithAuthorization`)
+- If paying with **CST**, the factory needs a CST price oracle set (see below)
+
+## CST price oracle
+
+To accept CST payments, the factory needs `cstPriceOracle`:
+
+- Interprets oracle data as a base-10 number string (ASCII digits)
+- Treats it as: **1 USDC = X CST**
+- Uses it to convert USDC-denominated amounts into CST:
+  - `cstAmount = (usdcAmount * oneUsdcInCst) / 1e6`
+
+Owner sets it via `updateCstPriceOracle(address)`.
+
+## Deploying an oracle
+
+Providers deploy their oracle by calling `deployOracle(...)`.
+
+Inputs include:
+
+- chosen payment token (USDC or CST)
+- recommended update duration
+- data update price
+- initial oracle data (bytes)
+- an EIP-3009 authorization signature (so the factory can pull the deploy fee)
+
+What happens:
+
+- Factory checks the provider has enough balance
+- Deploys a new `Oracle` contract
+- Records it in:
+  - `oracleList`
+  - `oracles[oracleAddress]` (provider, createdAt, active)
+  - `providerOracles[provider]`
+- Transfers the deploy fee to the factory owner using `transferWithAuthorization(...)`
+- Emits `OracleDeployed(oracleAddress, provider, timestamp)`
+
+## Updating oracle data
+
+Only the factory **owner** can push updates:
+
+## `updateOracleData(...)`
+
+- Writes `_data` to the oracle (`Oracle.updateData`)
+- Pays the provider using `transferWithAuthorization(...)`
+- Splits fees:
+  - provider earns: `dataUpdatePrice - (dataUpdatePrice * oracleFactoryShare / 100)`
+  - factory share is kept by the owner
+
+Note: when paying with CST, provider earnings are converted using `cstPriceOracle`.
+
+## Admin / management
+
+- `setOracleStatus(oracle, isActive)`
+- `setOracleDataUpdatePrice(oracle, price)`
+
+## Querying deployed oracles
+
+- `getAllOracles(offset, limit)` (pagination)
+- `getProviderOracles(provider, offset, limit)` (pagination)
+- `getOracleInfo(oracle)` → `(provider, createdAt, isActive)`
+
