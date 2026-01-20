@@ -14,7 +14,7 @@ import { Coset, Networks, PaymentToken } from "@coset-dev/sdk";
 
 In Coset SDK, every instance is tied to a specific oracle. So, we need to provide the oracle address when creating a Coset instance.
 
-For this example, we will use a CST-USDT price feed oracle deployed on Mantle Sepolia Testnet. You can use whatever oracle address you want. You can search for oracles at [Coset App](https://coset.dev).
+For this example, we will use a [CST-USDT price feed oracle](https://coset.dev/oracle/696a00d4a2c1543d52568f12) deployed on Mantle Sepolia Testnet. You can use whatever oracle address you want. You can search for oracles at [Coset App](https://coset.dev).
 
 Now we can create a Coset instance:
 
@@ -22,13 +22,26 @@ Now we can create a Coset instance:
 const coset = new Coset(
     Networks.MANTLE_TESTNET,
     PaymentToken.USDC,
-    "0xabc...", // Oracle Address
+    "0xEfB607f0656c7d8B0a23401e2AE6f4DaAfD7fe35", // Oracle Address
     process.env.PRIVATE_KEY as `0x${string}` // Wallet Private Key
 );
 ```
 
-Here, we created a new Coset instance for the CST-USDT price feed oracle on Mantle Sepolia Testnet, using USDC as the payment token. We also provided a private key for signing transactions.
+Here, we created a new Coset instance on Mantle Sepolia Testnet, using USDC as the payment token. We also provided a private key for signing transactions.
 
 Wallet private key is required for data updates. Be sure you have enough USDC or CST token on chosen network.
+
+Another example on Cronos Testnet with CST as payment token:
+
+```typescript
+const coset = new Coset(
+    Networks.CRONOS_TESTNET,
+    PaymentToken.CST,
+    "0x6901eC8570005867DFA1AFE7Fe6F0B374884cb5D", // Oracle Address
+    process.env.PRIVATE_KEY as `0x${string}` // Wallet Private Key
+);
+```
+
+[This oracle](https://coset.dev/oracle/696f9bbc1aca83d52933ec0d) returns Bitcoin price when requested.
 
 And now we can start reading data from oracles and call data updates.

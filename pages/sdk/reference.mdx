@@ -19,6 +19,8 @@ Coset SDK API reference.
 export enum Networks {
   MANTLE = "mantle",
   MANTLE_TESTNET = "mantle-testnet",
+  CRONOS = "cronos",
+  CRONOS_TESTNET = "cronos-testnet"
 }
 ```
 
@@ -119,12 +121,13 @@ new Coset(
 
 **Payment token resolution (internal map)**
 
-- `Networks.MANTLE`:
-  - `PaymentToken.USDC` → `0x09bc4e0d864854c6afb6eb9a9cdf58ac190d0df9`
-  - `PaymentToken.CST` → `0x77A90090C9bcc45940E18657fB82Fb70A2D494fd`
 - `Networks.MANTLE_TESTNET`:
   - `PaymentToken.USDC` → `0x05856b07544044873616d390Cc50c785fe8a8885`
   - `PaymentToken.CST` → `0x77A90090C9bcc45940E18657fB82Fb70A2D494fd`
+
+- `Networks.CRONOS_TESTNET`:
+  - `PaymentToken.USDC` → `0xb1BF5CA11a4C4f95ab46B496757E1DBb1397eC0a`
+  - `PaymentToken.CST` → `0x6e0a0ba0e4e7433e65e6b4a12860baf43b0b8f06`
 
 ### Public properties
 

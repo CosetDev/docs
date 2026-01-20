@@ -11,7 +11,7 @@ You need:
 
 ## `coset.update()`
 
-Use [`Coset.update()`](docs/pages/sdk/reference.mdx:143) to perform a paid update.
+Use [`Coset.update()`](docs/pages/sdk/reference) to perform a paid update.
 
 ```typescript
 import { Coset, Networks, PaymentToken } from "@coset-dev/sdk";
@@ -32,13 +32,13 @@ console.log("Data:", update.data);
 
 ### Returned shape (`IUpdate`)
 
-On success, `update()` resolves to an [`IUpdate`](docs/pages/sdk/reference.mdx:64):
+On success, `update()` resolves to an [`IUpdate`](docs/pages/sdk/reference):
 
 - `spent`: cost breakdown (total, gasFee, platformFee, dataProviderFee)
 - `data` (optional): update response payload
 - `tx` (optional): transaction hash
 
-On success, the SDK also increments [`coset.spent`](docs/pages/sdk/reference.mdx:131) by `spent.total`.
+On success, the SDK also increments [`coset.spent`](docs/pages/sdk/reference) by `spent.total`.
 
 ## Spending limits
 
@@ -78,7 +78,7 @@ if (needed) {
 }
 ```
 
-Or use [`Coset.optionalUpdate()`](docs/pages/sdk/reference.mdx:211), which performs that check and triggers an update when needed, but always resolves with `null`:
+Or use [`Coset.optionalUpdate()`](docs/pages/sdk/reference), which performs that check and triggers an update when needed, but always resolves with `null`:
 
 ```typescript
 await coset.optionalUpdate();
@@ -86,6 +86,6 @@ await coset.optionalUpdate();
 
 ## Rejection behavior
 
-Unlike `read()`, [`Coset.update()`](docs/pages/sdk/reference.mdx:143) **rejects** on failures.
+Unlike `read()`, [`Coset.update()`](docs/pages/sdk/reference) **rejects** on failures.
 
 The rejection value is an object (not an `Error`) and typically contains a `message` and a zeroed `spent` object. See the detailed cases in the reference.

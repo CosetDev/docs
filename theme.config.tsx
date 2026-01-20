@@ -14,6 +14,15 @@ const config: DocsThemeConfig = {
   footer: {
     text: "Coset - Public Oracle Ecosystem",
   },
+  head: (
+    <>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <meta property="og:title" content="Coset" />
+      <meta property="og:description" content="Coset - Public Oracle Ecosystem" />
+      <meta property="og:image" content="/logo.png" />
+      <title>Coset - Public Oracle Ecosystem</title>
+    </>
+  )
 };
 
 export default config;
